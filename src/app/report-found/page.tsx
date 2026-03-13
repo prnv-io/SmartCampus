@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Navbar from '../../components/Navbar'
 import { supabase } from '@/services/supabaseClient'
 import { useRouter } from 'next/navigation'
+import CampusMapPicker from '../../components/CampusMapPicker'
 
 export default function ReportFoundPage() {
   const router = useRouter()
@@ -14,6 +15,9 @@ export default function ReportFoundPage() {
   const [dateFound, setDateFound] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [mapX, setMapX] = useState<number | null>(null)
+  const [mapY, setMapY] = useState<number | null>(null)
+  const [mapZone, setMapZone] = useState<string | null>(null)
 
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null
@@ -61,6 +65,9 @@ export default function ReportFoundPage() {
           image_url: imageUrl,
           user_id: user.id,
           date: dateFound ? new Date(dateFound) : new Date(),
+          map_x: mapX ?? null,
+          map_y: mapY ?? null,
+          map_zone: mapZone ?? null,
         },
       ])
 
@@ -76,6 +83,9 @@ export default function ReportFoundPage() {
         setDateFound('')
         setImageFile(null)
         setPreview(null)
+        setMapX(null)
+        setMapY(null)
+        setMapZone(null)
       }
     })()
   }
@@ -130,6 +140,26 @@ export default function ReportFoundPage() {
                 <img src={preview} alt="preview" className="mt-3 w-48 h-48 object-cover rounded-md border" />
               )}
             </label>
+
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700">Select on campus map (optional)</span>
+              <div className="mt-2">
+                <CampusMapPicker
+                  onLocationSelect={(x, y) => {
+                    setMapX(x)
+                    setMapY(y)
+                  }}
+                  onZoneSelect={(zone) => setMapZone(zone)}
+                  heightClass="h-[60vh] sm:h-[70vh]"
+                />
+              </div>
+              {(mapX !== null && mapY !== null) && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Selected coordinates: {mapX.toFixed(1)}, {mapY.toFixed(1)}
+                  {mapZone && ` • Zone: ${mapZone}`}
+                </p>
+              )}
+            </div>
 
             <div className="pt-2">
               <button type="submit" className="w-full inline-flex justify-center items-center px-4 py-2 bg-terracotta text-white rounded-md font-medium hover:bg-terracotta-700">Submit Report</button>

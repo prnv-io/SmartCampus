@@ -2,7 +2,6 @@
 
 import Navbar from '../../../components/Navbar'
 import ClaimButton from '../../../components/ClaimButton'
-import { useEffect, useRef, useState } from 'react'
 
 type MockItem = {
   id: string
@@ -90,45 +89,28 @@ export default function ItemPage({ params }: { params: { id: string } }) {
 }
 
 function MapWithPin({ mapX, mapY }: { mapX: number; mapY: number }) {
-  const imgRef = useRef<HTMLImageElement | null>(null)
-  const [pos, setPos] = useState<{ leftPercent: number; topPercent: number } | null>(null)
-
-  useEffect(() => {
-    const img = imgRef.current
-    if (!img) return
-
-    const handleLoad = () => {
-      const rect = img.getBoundingClientRect()
-      if (rect.width > 0 && rect.height > 0) {
-        // Compute percent based on current displayed size.
-        const leftPercent = (mapX / rect.width) * 100
-        const topPercent = (mapY / rect.height) * 100
-        setPos({ leftPercent, topPercent })
-      }
-    }
-
-    if (img.complete) handleLoad()
-    else img.addEventListener('load', handleLoad)
-    return () => img.removeEventListener('load', handleLoad)
-  }, [mapX, mapY])
-
+  // mapX and mapY are stored as percentages (0-100)
+  // of the image width and height respectively.
   return (
-    <div className="w-full" style={{ position: 'relative' }}>
-      <img ref={imgRef} src="/campus-map.svg" alt="Campus map" className="w-full h-auto block select-none" draggable={false} />
-      {pos && (
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: `${pos.leftPercent}%`,
-            top: `${pos.topPercent}%`,
-            transform: 'translate(-50%, -100%)',
-            pointerEvents: 'none',
-          }}
-        >
-          <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-md" />
-        </div>
-      )}
+    <div className="w-full relative">
+      <img
+        src="/campus-map.jpg"
+        alt="Campus map"
+        className="w-full h-auto block select-none"
+        draggable={false}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: `${mapX}%`,
+          top: `${mapY}%`,
+          transform: 'translate(-50%, -100%)',
+          pointerEvents: 'none',
+        }}
+      >
+        <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-md" />
+      </div>
     </div>
   )
 }
