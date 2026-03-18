@@ -150,7 +150,6 @@ export default function ReportFoundPage() {
                     setMapY(y)
                   }}
                   onZoneSelect={(zone) => setMapZone(zone)}
-                  heightClass="h-[60vh] sm:h-[70vh]"
                 />
               </div>
               {(mapX !== null && mapY !== null) && (

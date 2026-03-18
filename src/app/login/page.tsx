@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/services/supabaseClient'
 import Navbar from '@/components/Navbar'
+import { syncUser } from '@/lib/syncUser'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -19,7 +20,14 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) setError(error.message)
-    else router.push('/items')
+    else {
+      try {
+        await syncUser()
+      } catch (e: any) {
+        console.warn('[Login] syncUser failed', e)
+      }
+      router.push('/items')
+    }
   }
 
   const signInWithGoogle = async () => {

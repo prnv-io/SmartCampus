@@ -175,8 +175,6 @@ export default function ReportLostPage() {
                     setMapY(y)
                   }}
                   onZoneSelect={(zone) => setMapZone(zone)}
-                  // make the map taller for easier selection
-                  heightClass="h-[60vh] sm:h-[70vh]"
                 />
               </div>
               {(mapX !== null && mapY !== null) && (

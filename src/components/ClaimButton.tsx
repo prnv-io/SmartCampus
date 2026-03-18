@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { supabase } from '@/services/supabaseClient'
+import { sendItemUpdateEmail } from '@/services/notificationService'
 
 interface ClaimButtonProps {
   itemId: string
@@ -50,6 +51,12 @@ export default function ClaimButton({ itemId }: ClaimButtonProps) {
       console.error('Claim insert error:', error)
       setFeedback(error.message || 'Failed to submit claim.')
       return
+    }
+
+    try {
+      await sendItemUpdateEmail(itemId)
+    } catch (notifyErr) {
+      console.warn('Failed to send claim notification email', notifyErr)
     }
 
     setFeedback('Claim submitted successfully.')

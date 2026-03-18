@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/services/supabaseClient'
 import Navbar from '@/components/Navbar'
+import { syncUser } from '@/lib/syncUser'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -26,6 +27,11 @@ export default function SignupPage() {
     if (error) {
       setError(error.message)
     } else {
+      try {
+        await syncUser()
+      } catch (e: any) {
+        console.warn('[Signup] syncUser failed', e)
+      }
       router.push('/items')
     }
   }
