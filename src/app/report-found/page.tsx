@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import Navbar from '../../components/Navbar'
-import { supabase } from '@/services/supabaseClient'
 import { useRouter } from 'next/navigation'
 import CampusMapPicker from '../../components/CampusMapPicker'
+import { createItem } from '@/services/items'
 
 export default function ReportFoundPage() {
   const router = useRouter()
@@ -30,51 +30,20 @@ export default function ReportFoundPage() {
     e.preventDefault()
 
     ;(async () => {
-      // ensure logged in
-      const { data: userData } = await supabase.auth.getUser()
-      const user = userData?.user ?? null
-      if (!user) {
-        alert('You must be logged in to report an item.')
-        router.push('/login')
-        return
-      }
-
-      let imageUrl: string | null = null
-      if (imageFile) {
-        const fileName = `${Date.now()}-${imageFile.name}`
-        try {
-          const { data: uploadData, error: uploadError } = await supabase.storage.from('items-images').upload(fileName, imageFile)
-          if (uploadError) {
-            alert(`Image upload failed: ${uploadError.message}`)
-            return
-          }
-          imageUrl = fileName
-        } catch (err) {
-          alert('Image upload failed')
-          return
-        }
-      }
-
-      const { error } = await supabase.from('items').insert([
-        {
+      try {
+        await createItem({
           title,
           description,
           category,
           location,
-          status: 'found',
-          image_url: imageUrl,
-          user_id: user.id,
+          status: "found",
           date: dateFound ? new Date(dateFound) : new Date(),
+          imageFile,
           map_x: mapX ?? null,
           map_y: mapY ?? null,
           map_zone: mapZone ?? null,
-        },
-      ])
+        })
 
-      if (error) {
-        console.error(error)
-        alert(error.message)
-      } else {
         alert('Found item reported successfully!')
         setTitle('')
         setCategory('Other')
@@ -86,6 +55,12 @@ export default function ReportFoundPage() {
         setMapX(null)
         setMapY(null)
         setMapZone(null)
+      } catch (error: any) {
+        console.error(error)
+        alert(error?.message || 'Failed to report found item')
+        if (String(error?.message || "").includes("logged in")) {
+          router.push('/login')
+        }
       }
     })()
   }

@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from 'react'; 
-import { supabase } from "@/services/supabaseClient";     
+import { useState } from 'react';    
 import Navbar from '../../components/Navbar'
 import CampusMapPicker from '../../components/CampusMapPicker'
 import { motion } from 'framer-motion'
 import { fadeInUp } from '../../lib/animations'
 import { useRouter } from 'next/navigation'
+import { createItem } from '@/services/items'
 
 export default function ReportLostPage() {
   const router = useRouter()
@@ -30,84 +30,41 @@ export default function ReportLostPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-
-  // Ensure user is authenticated
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData?.user ?? null
-  if (!user) {
-    alert('You must be logged in to report an item.')
-    router.push('/login')
-    return
-  }
-
-  let imageUrl = null
-
-  if (imageFile) {
-    const fileName = `${Date.now()}-${imageFile.name}`
+    e.preventDefault()
 
     try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("items-images")
-        .upload(fileName, imageFile)
+      await createItem({
+        title,
+        description,
+        category,
+        location,
+        status: "lost",
+        date: dateLost ? new Date(dateLost) : new Date(),
+        imageFile,
+        map_x: mapX ?? null,
+        map_y: mapY ?? null,
+        map_zone: mapZone ?? null,
+      })
 
-      if (uploadError) {
-        console.error('Supabase upload error:', uploadError)
-        alert(`Image upload failed: ${uploadError.message || JSON.stringify(uploadError)}`)
-        return
+      alert("Lost item reported successfully!")
+      setTitle("")
+      setCategory("Other")
+      setDescription("")
+      setLocation("")
+      setDateLost("")
+      setImageFile(null)
+      setPreview(null)
+      setMapX(null)
+      setMapY(null)
+      setMapZone(null)
+    } catch (error: any) {
+      console.error(error)
+      alert(error?.message || "Failed to report lost item")
+      if (String(error?.message || "").includes("logged in")) {
+        router.push("/login")
       }
-
-      if (!uploadData) {
-        console.error('Supabase returned no upload data for', fileName)
-        alert('Image upload failed: no upload data')
-        return
-      }
-
-      // Save the storage path so the frontend can create signed URLs when needed
-      imageUrl = fileName
-    } catch (err) {
-      console.error('Unexpected error during image upload', err)
-      const msg = err instanceof Error ? err.message : String(err)
-      alert(`Image upload failed: ${msg}`)
-      return
     }
   }
-
-  const { error } = await supabase.from("items").insert([
-    {
-      title,
-      description,
-      category,
-      location,
-      status: "lost",
-      image_url: imageUrl,
-      user_id: user.id,
-      date: dateLost ? new Date(dateLost) : new Date(),
-      // optional map coordinates / zone
-      map_x: mapX ?? null,
-      map_y: mapY ?? null,
-      map_zone: mapZone ?? null,
-    },
-  ])
-
-  if (error) {
-    console.error(error)
-    alert(error.message)
-  } else {
-    alert("Lost item reported successfully!")
-
-    setTitle("")
-    setCategory("Other")
-    setDescription("")
-    setLocation("")
-    setDateLost("")
-    setImageFile(null)
-    setPreview(null)
-    setMapX(null)
-    setMapY(null)
-    setMapZone(null)
-  }
-}
 
   return (
     <div className="min-h-screen bg-gray-50">

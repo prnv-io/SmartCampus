@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Navbar from '../../components/Navbar'
 import ItemCard from '../../components/ItemCard'
 import { supabase } from '@/services/supabaseClient'
+import { syncUser } from '@/services/auth'
+import { resolvePublicImageUrl } from '@/services/storage'
 
 type DbItem = {
   id: string
@@ -28,6 +30,15 @@ export default function ItemsPage() {
 
     const fetchItems = async () => {
       setLoading(true)
+
+      // After OAuth redirects, ensure the user exists in our custom `users` table.
+      // Safe to call even when not signed in.
+      try {
+        await syncUser()
+      } catch (e) {
+        console.warn('[ItemsPage] syncUser failed', e)
+      }
+
       const { data, error } = await supabase
         .from('items')
         .select('*')
@@ -40,38 +51,14 @@ export default function ItemsPage() {
         if (mounted) {
           const rows = (data as DbItem[]) || []
 
-          // For items that have an `image_url` which is not an absolute URL,
-          // attempt to create a short-lived signed URL (useful when bucket is private).
-          const resolved = await Promise.all(
-            rows.map(async (it) => {
-              try {
-                if (!it.image_url) return it
-
-                // if image_url already looks like a full URL, keep as-is
-                if (typeof it.image_url === 'string' && it.image_url.startsWith('http')) {
-                  return it
-                }
-
-                // Otherwise treat image_url as a storage path (file name/path) and request signed URL
-                const { data: signed, error: signError } = await supabase
-                  .storage
-                  .from('items-images')
-                  .createSignedUrl(it.image_url as string, 60)
-
-                if (signError) {
-                  console.error('Failed to create signed URL for', it.image_url, signError)
-                  return it
-                }
-
-                return { ...it, image_url: signed?.signedUrl ?? it.image_url }
-              } catch (e) {
-                console.error('Error resolving image URL', e)
-                return it
-              }
+          // Images are now stored as public URLs. Keep backward compatibility
+          // for older rows that stored a storage path.
+          setItems(
+            rows.map((it) => {
+              const resolved = resolvePublicImageUrl(it.image_url ?? null)
+              return resolved ? { ...it, image_url: resolved } : it
             })
           )
-
-          setItems(resolved)
         }
       }
 
