@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { supabase } from '@/services/supabaseClient'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -12,8 +11,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    const supabase = createRouteHandlerClient({ cookies })
 
     // Get current user
     const {
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Check if user already claimed this item
     const { data: existingClaim } = await supabase
       .from('claims')
-      .select('id')
+      .select('claim_id')
       .eq('item_id', itemId)
       .eq('claimer_id', user.id)
       .single()
@@ -83,8 +80,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const supabase = createRouteHandlerClient({ cookies })
-
     // Get current user
     const {
       data: { user },
@@ -101,11 +96,11 @@ export async function GET(request: NextRequest) {
     // Get claims for item (only if user owns the item)
     const { data: item } = await supabase
       .from('items')
-      .select('owner_id')
+      .select('user_id')
       .eq('id', itemId)
       .single()
 
-    if (item?.owner_id !== user.id) {
+    if (item?.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Not authorized' },
         { status: 403 }

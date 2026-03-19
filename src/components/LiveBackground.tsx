@@ -3,9 +3,10 @@
 import Particles from "@tsparticles/react";
 import { useCallback } from "react";
 import { loadSlim } from "tsparticles-slim";
+import type { Engine } from "tsparticles-engine";
 
 export default function LiveBackground() {
-  const particlesInit = useCallback(async (engine) => {
+  const particlesInit = useCallback(async (engine: Engine) => {
     await loadSlim(engine);
   }, []);
 
@@ -13,7 +14,6 @@ export default function LiveBackground() {
     <div className="fixed inset-0 z-0 pointer-events-none">
       <Particles
         id="tsparticles"
-        init={particlesInit}
         options={{
           fullScreen: { enable: false },
           background: { color: "transparent" },
