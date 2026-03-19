@@ -1,7 +1,6 @@
 import './globals.css'
 import PageTransition from '../components/PageTransition'
-import AnimatedBackground from '../components/AnimatedBackground'
-import InteractiveBackground from '../components/InteractiveBackground'
+import LiveBackground from '../components/LiveBackground'
 import AuthSync from '../components/AuthSync'
 
 export const metadata = {
@@ -11,14 +10,15 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="relative min-h-screen">
-        <AnimatedBackground />
-        <InteractiveBackground />
-        <AuthSync />
-        <div className="relative z-20">
-          <PageTransition>{children}</PageTransition>
+      <body className="relative min-h-screen bg-transparent">
+        <div className="relative">
+          <LiveBackground />
+          <div className="relative z-10" suppressHydrationWarning>
+            <AuthSync />
+            <PageTransition>{children}</PageTransition>
+          </div>
         </div>
       </body>
     </html>
-  )
+  );
 }

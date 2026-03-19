@@ -1,18 +1,35 @@
 "use client"
 
-import { useState, type FormEvent } from 'react'
-import { supabase } from '@/services/supabaseClient'
-import { sendItemUpdateEmail } from '@/services/notificationService'
+import { useState, type FormEvent, useEffect } from 'react'
+import claimService from '@/services/claimService'
 
 interface ClaimButtonProps {
   itemId: string
+  itemStatus?: string
 }
 
-export default function ClaimButton({ itemId }: ClaimButtonProps) {
+export default function ClaimButton({ itemId, itemStatus = 'found' }: ClaimButtonProps) {
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [hasClaimed, setHasClaimed] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
+
+  useEffect(() => {
+    const checkClaim = async () => {
+      try {
+        const claimed = await claimService.hasUserClaimedItem(itemId)
+        setHasClaimed(claimed)
+      } catch (err) {
+        console.log('Could not check claim status')
+      } finally {
+        setIsChecking(false)
+      }
+    }
+
+    checkClaim()
+  }, [itemId])
 
   const openModal = () => {
     setFeedback(null)
@@ -36,45 +53,46 @@ export default function ClaimButton({ itemId }: ClaimButtonProps) {
     setLoading(true)
     setFeedback(null)
 
-    const { data, error } = await supabase.from('claims').insert([
-      {
-        item_id: itemId,
-        claimer_id: 'anonymous_user',
-        message: message.trim(),
-        claim_status: 'pending',
-      },
-    ])
-
-    setLoading(false)
-
-    if (error) {
-      console.error('Claim insert error:', error)
-      setFeedback(error.message || 'Failed to submit claim.')
-      return
-    }
-
     try {
-      await sendItemUpdateEmail(itemId)
-    } catch (notifyErr) {
-      console.warn('Failed to send claim notification email', notifyErr)
+      await claimService.submitClaim(itemId, message.trim())
+      setFeedback('Claim submitted successfully.')
+      setHasClaimed(true)
+      // close after short delay so user can read success
+      setTimeout(() => {
+        closeModal()
+      }, 900)
+    } catch (error: any) {
+      console.error('Claim submit error:', error)
+      setFeedback(error.message || 'Failed to submit claim.')
+    } finally {
+      setLoading(false)
     }
-
-    setFeedback('Claim submitted successfully.')
-    // close after short delay so user can read success
-    setTimeout(() => {
-      closeModal()
-    }, 900)
   }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openModal}
-        className="inline-flex items-center px-3 py-2 bg-terracotta text-white rounded-md text-sm font-medium hover:bg-terracotta-700"
-      >
-        Claim Item
-      </button>
+      {itemStatus !== 'found' ? (
+        <div className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+          itemStatus === 'lost'
+            ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
+            : 'bg-green-100 text-green-700 cursor-not-allowed'
+        }`}>
+          {itemStatus === 'lost' ? 'Lost - Cannot Claim' : 'Already Returned'}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={openModal}
+          disabled={isChecking || hasClaimed}
+          className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            hasClaimed
+              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+              : 'bg-terracotta text-white hover:bg-terracotta-700'
+          }`}
+        >
+          {isChecking ? 'Loading...' : hasClaimed ? 'Already Claimed' : 'Claim Item'}
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -97,7 +115,9 @@ export default function ClaimButton({ itemId }: ClaimButtonProps) {
               </label>
 
               {feedback && (
-                <p className={`mt-3 text-sm ${feedback.includes('success') ? 'text-green-600' : 'text-red-600'}`}>{feedback}</p>
+                <p className={`mt-3 text-sm ${feedback.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
+                  {feedback}
+                </p>
               )}
 
               <div className="mt-4 flex items-center justify-end gap-2">
@@ -125,4 +145,3 @@ export default function ClaimButton({ itemId }: ClaimButtonProps) {
     </>
   )
 }
-// (end of file)
